@@ -1,0 +1,7 @@
+Sunday,06,45,off,Steam
+Monday,05,30,off,Steam
+Tuesday,05,30,on,No Steam
+Wednesday,05,30,off,Steam
+Thursday,05,50,on,No Steam
+Friday,05,30,off,Steam
+Saturday,06,45,off,Steam

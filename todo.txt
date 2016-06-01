@@ -1,0 +1,7 @@
+TODO espresso website (30 May 2016):
+(done, time and timezone) 1. update automatically with current timezone
+(done) 2. save timezone to SD card
+(done) 3. replace SD card with micro SD
+(done) 4. set times
+5. turn on machine at correct time
+6. 

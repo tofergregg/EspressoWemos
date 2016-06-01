@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+<head>
+  <title>It's Espresso Time</title>
+  <meta charset="utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Abril+Fatface' rel='stylesheet' type='text/css'>
+  <style>
+      body {
+        font-family: 'Abril Fatface', serif;
+        font-size: 24px;
+        color: white;
+        background:url('beans.jpg');
+	background-color:#cccccc;
+      }
+      .helper {
+	    display: inline-block;
+	    height: 100%;
+	    vertical-align: middle;
+      }
+
+      img {
+	    vertical-align: middle;
+	    max-height: 50px;
+      }
+      .plaintext {
+              color:black;
+              font-size:12px;
+      }
+  </style>
+</head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" ></script>
+<script type="text/javascript">
+
+function init() {
+	// set the DST text
+	var tzd = getTimeZoneData();
+        // set time and then get it back again
+        var d = new Date();
+        d = parseInt(+d / 1000);
+        $.post('setClock.cgi',{'epoch':+d,'timezone':tzd.timezone_offset},function(data){
+                $.post('getServerTime.cgi',{},function(data){
+                        var serverDate = parseInt(data)*1000; // ms
+                        // save difference in case of an offset
+                        init.dateOffset = d*1000 - serverDate;
+                        // update time every second
+			(function(){
+                            var currentDate = new Date();
+                            currentDate = new Date(+currentDate + init.dateOffset);
+			    $('#timeBlock').html(currentDate);
+			    setTimeout(arguments.callee, 1000);
+			})();
+                });
+        });
+
+	checkLED("on_button"); // check ON/OFF LED
+	checkLED("steam_button"); // check Steam LED
+	$.post("getTimes.cgi",{},
+	function(data) {
+		console.log(data);
+                var splitData = [];
+                var dataArr = data.split('\n');
+                dataArr.pop();
+                for (var i=0; i<dataArr.length;i++) {
+                        splitData.push(dataArr[i].split(','));
+                } 
+		setupSelections();
+		if (splitData != "") {
+			// populate with loaded values
+			for (i=0;i<splitData.length;i++) {
+				$("#selectHour_"+splitData[i][0]).val(splitData[i][1]);
+				$("#selectMinute_"+splitData[i][0]).val(splitData[i][2]);
+				$("#checkbox_"+splitData[i][0]).prop('checked',splitData[i][3]==="on");
+				$("#steam_"+splitData[i][0]).text(splitData[i][4]);
+			}
+		}
+	});	
+}
+function checkLED(LED_name) {
+        return;
+	if (LED_name == "on_button") {
+		$.post( "cgi-bin/CheckOnLED.py", {"LED_num":4}, 
+        	function (data){
+            		console.log(data);
+            		if (data.indexOf("On")!=-1) {
+            			$("#espressoBoiler").attr("src","pwrgreen.png");
+            			checkLED.OnLED = true;
+            		}
+            		else {
+            			$("#espressoBoiler").attr("src","pwrred.png")
+            			checkLED.OnLED = false;
+            		}
+            	    });
+        }
+        else if (LED_name == "steam_button") {
+		$.post( "cgi-bin/CheckOnLED.py", {"LED_num":17}, 
+        	function (data){
+            		console.log(data);
+            		if (data.indexOf("Off")==-1) { // blinking or on
+            			$("#steamBoiler").attr("src","pwrgreen.png");
+            			checkLED.SteamLED = true;
+            		}
+            		else {
+            			$("#steamBoiler").attr("src","pwrred.png")
+            			checkLED.SteamLED = false;
+            		}
+            	});
+	}
+}
+function setupSelections() {
+	var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+	var hours = [];
+        for(i=0;i<24;i++) {
+                if (i < 10) {
+                        hours[i]="0";
+                }
+                else {
+                        hours[i] = "";
+                }
+                hours[i]+=i;
+                
+        }
+	var minutes=[]
+	for(i=0;i<60;i++) {
+		if (i==0) {
+			minutes[i]="00";
+		}
+		else if (i<10) {
+			minutes[i]="0"+i
+		}
+		else {
+			minutes[i]=i;
+		}
+	}
+	
+	for (day=0;day<days.length;day++) {
+		setupCheckBox(days[day]);
+
+		select = document.createElement("select");
+		select.setAttribute("name", "selectHour_"+days[day]);
+		select.setAttribute("id", "selectHour_"+days[day]);
+		select.setAttribute("style","font-size: 24pt;");
+		for (i=0;i<hours.length;i++) {
+			option = document.createElement("option");
+			option.setAttribute("val", hours[i]);
+			option.text=hours[i];
+			select.appendChild(option);
+		}
+		$("#"+days[day]).append(select);
+		$("#"+"selectHour_"+days[day]).val("6");
+		
+		select = document.createElement("select");
+		select.setAttribute("name", "selectMinute_"+days[day]);
+		select.setAttribute("id", "selectMinute_"+days[day]);
+		select.setAttribute("style","font-size: 24pt;");
+		for (i=0;i<minutes.length;i++) {
+			option = document.createElement("option");
+			option.setAttribute("val", minutes[i]);
+			option.text=minutes[i];
+			select.appendChild(option);
+		}
+		$("#"+days[day]).append(select);
+		
+		steamText = document.createElement("span");
+		steamText.setAttribute("onclick","changeSteam('"+days[day]+"')");
+		steamText.setAttribute("id","steam_"+days[day]);
+		$("#"+days[day]).append(steamText);
+		$("#steam_"+days[day]).html("(Steam)");
+	}
+}
+function changeSteam(day) {
+	steamText = $("#steam_"+day).text();
+	if (steamText == "No Steam") steamText = "Steam";
+	else steamText = "No Steam";
+	$("#steam_"+day).text(steamText);
+}
+function setupCheckBox(day) {
+	checkbox = document.createElement("input");
+	checkbox.type = "checkbox";
+	checkbox.setAttribute("name", "checkbox_"+day);
+	checkbox.setAttribute("id", "checkbox_"+day);
+	//checkbox.checked = true;
+	$("#"+day).prepend(checkbox);
+}
+function turnOffLed(){
+	$.post( "cgi-bin/TurnOffVivaldi.py", {}, 
+        	function (data){
+            		console.log(data);
+            		//alert(data);
+    });
+}
+
+function onButton(){
+	$("#espressoBoiler").attr("src","progress.gif");
+	$("#steamBoiler").attr("src","progress.gif");
+
+	if (checkLED.OnLED == false) {
+		$.post( "cgi-bin/TurnOnVivaldi.py", {}, 
+			function (data){
+				console.log(data);
+				//alert(data);
+				// because the on button goes off during turn-on (!)
+				// we need to wait five seconds before checking to
+				// ensure we're correct.
+				setTimeout(function() { checkLED("on_button"); }, 5000);
+				checkLED("steam_button"); // check Steam LED
+    			});
+    	}
+    	else {
+		$.post( "cgi-bin/TurnOffVivaldi.py", {}, 
+			function (data){
+				console.log(data);
+				//alert(data);
+				checkLED("on_button"); // check ON LED
+				checkLED("steam_button"); // check Steam LED
+			});
+    	}
+}
+
+function steamButton(){
+	//$("#espressoBoiler").attr("src","progress.gif");
+	$("#steamBoiler").attr("src","progress.gif");
+
+	if (checkLED.SteamLED == false) {
+		$.post( "cgi-bin/TurnOnSteamButton.py", {}, 
+			function (data){
+				console.log(data);
+				//alert(data);
+				checkLED("steam_button"); // check Steam LED
+
+    			});
+    	}
+    	else {
+		$.post( "cgi-bin/TurnOffSteamButton.py", {}, 
+			function (data){
+				console.log(data);
+				//alert(data);
+				checkLED("steam_button"); // check Steam LED
+			});
+    	}
+}
+function concatTime(day) {
+	var concat = day+","+
+		$(("#selectHour_")+day).val()+","+
+		$(("#selectMinute_")+day).val()+","+
+		$(("#checkbox_")+day).is(":checked")+","+
+		$(("#steam_")+day).text();
+        concat = concat.replace(/false/g,"off");
+        concat = concat.replace(/true/g,"on");
+        return concat;
+}
+function setWeeklyTimes(){
+	var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+	times='';
+
+	for (i=0;i<days.length;i++) {
+		times += concatTime(days[i])+'\n';
+	}
+
+	$.post("setTimes.cgi",{"times":times},
+		function(data) {
+			console.log(data);
+			alert("Your times have been updated.");
+		});			
+}
+var getTimeZoneData = function()
+{
+  var today = new Date();
+  var jan = new Date(today.getFullYear(), 0, 1);
+  var jul = new Date(today.getFullYear(), 6, 1);
+  var dst = today.getTimezoneOffset() < Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+
+  return {
+    timezone_offset: -(today.getTimezoneOffset()/60),
+    timezone_dst: +dst
+  };
+}
+
+// <input type="button" id="turnOn" value="Turn on Vivaldi" onclick="turnOnLed()">
+// <input type="button" id="turnOff" value="Turn off Vivaldi" onclick="turnOffLed()">
+</script>
+<body onload="init()">
+<h1>Espresso Time!</h1>
+	Espresso Boiler: <span class="helper"></span><img id="espressoBoiler" src="progress.gif" onclick="onButton()"></img><br>
+	Steam Boiler: <img id="steamBoiler" src="progress.gif" onclick="steamButton()"></img>
+	<p>
+	Set daily time to turn on machine:
+	<p>
+	<div id="Sunday">Sunday</div>
+	<div id="Monday">Monday</div>
+	<div id="Tuesday">Tuesday</div>
+	<div id="Wednesday">Wednesday</div>
+	<div id="Thursday">Thursday</div>
+	<div id="Friday">Friday</div>
+	<div id="Saturday">Saturday</div>
+	<p>
+	<div><input type="button" id="setWeeklyTimes" value="Set Times" onclick="setWeeklyTimes()"></div>
+        <p>
+        <div id="setTime" style="font-family: monospace;">
+                Current Time: 
+                <span id="timeBlock">
+                
+                </span>
+        </div>
+</body>
+</html>
