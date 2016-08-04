@@ -52,8 +52,6 @@ function init() {
                 });
         });
 
-	checkLED("on_button"); // check ON/OFF LED
-	checkLED("steam_button"); // check Steam LED
 	$.post("getTimes.cgi",{},
 	function(data) {
 		console.log(data);
@@ -73,15 +71,16 @@ function init() {
 				$("#steam_"+splitData[i][0]).text(splitData[i][4]);
 			}
 		}
+                checkLED("on_button"); // check ON/OFF LED
+                checkLED("steam_button"); // check Steam LED
 	});	
 }
 function checkLED(LED_name) {
-        return;
 	if (LED_name == "on_button") {
-		$.post( "cgi-bin/CheckOnLED.py", {"LED_num":4}, 
+		$.post( "LEDStatus.cgi", {"LED":"power"}, 
         	function (data){
             		console.log(data);
-            		if (data.indexOf("On")!=-1) {
+            		if (data.indexOf("on")!=-1) { // blinking or off
             			$("#espressoBoiler").attr("src","pwrgreen.png");
             			checkLED.OnLED = true;
             		}
@@ -92,10 +91,10 @@ function checkLED(LED_name) {
             	    });
         }
         else if (LED_name == "steam_button") {
-		$.post( "cgi-bin/CheckOnLED.py", {"LED_num":17}, 
+		$.post( "LEDStatus.cgi", {"LED":"steam"}, 
         	function (data){
             		console.log(data);
-            		if (data.indexOf("Off")==-1) { // blinking or on
+            		if (data.indexOf("off")==-1) { // blinking or on
             			$("#steamBoiler").attr("src","pwrgreen.png");
             			checkLED.SteamLED = true;
             		}
@@ -194,24 +193,27 @@ function onButton(){
 	$("#steamBoiler").attr("src","progress.gif");
 
 	if (checkLED.OnLED == false) {
-		$.post( "cgi-bin/TurnOnVivaldi.py", {}, 
+		$.post( "buttonPress.cgi", {"function":"power_on"}, 
 			function (data){
 				console.log(data);
 				//alert(data);
-				// because the on button goes off during turn-on (!)
 				// we need to wait five seconds before checking to
 				// ensure we're correct.
-				setTimeout(function() { checkLED("on_button"); }, 5000);
-				checkLED("steam_button"); // check Steam LED
+				setTimeout(function() { 
+                                        checkLED("on_button"); 
+				        checkLED("steam_button"); // check Steam LED
+                                }, 5000);
     			});
     	}
     	else {
-		$.post( "cgi-bin/TurnOffVivaldi.py", {}, 
+		$.post( "buttonPress.cgi", {"function":"power_off"}, 
 			function (data){
 				console.log(data);
 				//alert(data);
-				checkLED("on_button"); // check ON LED
-				checkLED("steam_button"); // check Steam LED
+				setTimeout(function() { 
+                                        checkLED("on_button"); // check ON LED
+                                        checkLED("steam_button"); // check Steam LED
+                                }, 5000);
 			});
     	}
 }
@@ -221,20 +223,23 @@ function steamButton(){
 	$("#steamBoiler").attr("src","progress.gif");
 
 	if (checkLED.SteamLED == false) {
-		$.post( "cgi-bin/TurnOnSteamButton.py", {}, 
+		$.post( "buttonPress.cgi", {"function":"steam_on"}, 
 			function (data){
 				console.log(data);
 				//alert(data);
-				checkLED("steam_button"); // check Steam LED
-
+				setTimeout(function() { 
+                                        checkLED("steam_button"); // check ON LED
+                                },5000);
     			});
     	}
     	else {
-		$.post( "cgi-bin/TurnOffSteamButton.py", {}, 
+		$.post( "buttonPress.cgi", {"function":"steam_off"}, 
 			function (data){
 				console.log(data);
 				//alert(data);
-				checkLED("steam_button"); // check Steam LED
+				setTimeout(function() { 
+                                        checkLED("steam_button"); // check ON LED
+                                },5000);
 			});
     	}
 }
