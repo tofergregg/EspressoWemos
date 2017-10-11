@@ -43,7 +43,7 @@ bool cgiRequest(String path);
 
 //const char* ssid = "EECS";
 //const char* password = "";
-const char* ssid = "MenloPark";
+const char* ssid = "Emerson St.";
 const char* password = "ThomasEdison";
 const char* host = "esp8266sd";
 int timezone = -4; // EDT
@@ -105,6 +105,10 @@ bool loadFromSdCard(String path){
 
   if (server.hasArg("download")) dataType = "application/octet-stream";
 
+  // send a cache header
+  if (dataType == "image/jpeg" or dataType == "image/png") {
+    server.sendHeader("Cache-Control","max-age=31536000, public");
+  }
   if (server.streamFile(dataFile, dataType) != dataFile.size()) {
     DBG_OUTPUT_PORT.println("Sent less data than expected!");
   }
